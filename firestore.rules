@@ -1,0 +1,174 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default-deny safety net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper Primitives
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Verification that current user belongs to the group
+    function isGroupMember(groupId) {
+      return isSignedIn() && exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid));
+    }
+
+    // User Profile Rules
+    function isValidUser(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.fullName is string && data.fullName.size() > 0 && data.fullName.size() <= 100 &&
+             data.email is string && data.email.size() <= 120 &&
+             (!('phone' in data) || (data.phone is string && data.phone.size() <= 20)) &&
+             (!('avatarUrl' in data) || (data.avatarUrl is string && data.avatarUrl.size() <= 500));
+    }
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && (request.auth.uid == userId);
+      allow list: if false;
+      allow create: if isSignedIn() && request.auth.uid == userId && isValidId(userId) && isValidUser(incoming());
+      allow update: if isSignedIn() && request.auth.uid == userId && isValidUser(incoming()) &&
+                    incoming().id == existing().id &&
+                    incoming().diff(existing()).affectedKeys().hasOnly(['fullName', 'phone', 'avatarUrl', 'updatedAt']);
+    }
+
+    // Family Group Rules
+    function isValidGroup(data) {
+      return data.id is string && data.id.size() <= 128 &&
+             data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+             data.createdBy is string && data.createdBy.size() <= 128 &&
+             (!('monthlyBudgetPaise' in data) || data.monthlyBudgetPaise is number) &&
+             (!('currency' in data) || (data.currency is string && data.currency.size() <= 10));
+    }
+
+    match /groups/{groupId} {
+      allow get: if isSignedIn() && isValidId(groupId) && (
+        resource.data.createdBy == request.auth.uid ||
+        exists(/databases/$(database)/documents/groups/$(groupId)/members/$(request.auth.uid))
+      );
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(groupId) && isValidGroup(incoming()) && incoming().createdBy == request.auth.uid;
+      allow update: if isSignedIn() && isValidId(groupId) && isValidGroup(incoming()) && (
+        existing().createdBy == request.auth.uid ||
+        isGroupMember(groupId)
+      ) && incoming().createdBy == existing().createdBy;
+
+      // Group Members subcollection
+      function isValidMember(data) {
+        return data.id is string && data.id.size() <= 128 &&
+               data.groupId is string && data.groupId == groupId &&
+               data.userId is string && data.userId.size() <= 128 &&
+               data.role in ['admin', 'member'] &&
+               (!('fullName' in data) || (data.fullName is string && data.fullName.size() <= 100)) &&
+               (!('relation' in data) || (data.relation is string && data.relation.size() <= 50));
+      }
+
+      match /members/{memberId} {
+        allow read: if isSignedIn() && isValidId(memberId) && (
+          get(/databases/$(database)/documents/groups/$(groupId)).data.createdBy == request.auth.uid ||
+          isGroupMember(groupId) ||
+          request.auth.uid == memberId
+        );
+        allow create: if isSignedIn() && isValidId(memberId) && isValidMember(incoming());
+        allow update: if isSignedIn() && isValidId(memberId) && isValidMember(incoming()) &&
+                      incoming().userId == existing().userId &&
+                      incoming().groupId == existing().groupId;
+        allow delete: if isSignedIn() && (
+          get(/databases/$(database)/documents/groups/$(groupId)).data.createdBy == request.auth.uid ||
+          request.auth.uid == memberId
+        );
+      }
+
+      // Expenses subcollection
+      function isValidExpense(data) {
+        return data.id is string && data.id.size() <= 128 &&
+               data.groupId is string && data.groupId == groupId &&
+               data.title is string && data.title.size() > 0 && data.title.size() <= 150 &&
+               data.amountPaise is number && data.amountPaise >= 0 &&
+               data.expenseType in ['personal', 'shared'] &&
+               data.paidBy is string && data.paidBy.size() <= 128 &&
+               data.expenseDate is string && data.expenseDate.size() <= 20;
+      }
+
+      match /expenses/{expenseId} {
+        allow read: if isSignedIn() && isValidId(expenseId) && isGroupMember(groupId);
+        allow create: if isSignedIn() && isValidId(expenseId) && isGroupMember(groupId) && isValidExpense(incoming());
+        allow update: if isSignedIn() && isValidId(expenseId) && isGroupMember(groupId) && isValidExpense(incoming()) &&
+                      incoming().groupId == existing().groupId;
+        allow delete: if isSignedIn() && isValidId(expenseId) && isGroupMember(groupId) && (
+          existing().paidBy == request.auth.uid ||
+          get(/databases/$(database)/documents/groups/$(groupId)).data.createdBy == request.auth.uid
+        );
+      }
+
+      // Udhaar Accounts subcollection
+      function isValidUdhaarAccount(data) {
+        return data.id is string && data.id.size() <= 128 &&
+               data.groupId is string && data.groupId == groupId &&
+               data.name is string && data.name.size() > 0 && data.name.size() <= 100 &&
+               data.accountType in ['family', 'shopkeeper', 'daily_help', 'friend', 'other'] &&
+               data.createdBy is string && data.createdBy.size() <= 128;
+      }
+
+      match /udhaarAccounts/{accountId} {
+        allow read: if isSignedIn() && isValidId(accountId) && isGroupMember(groupId);
+        allow create: if isSignedIn() && isValidId(accountId) && isGroupMember(groupId) && isValidUdhaarAccount(incoming());
+        allow update: if isSignedIn() && isValidId(accountId) && isGroupMember(groupId) && isValidUdhaarAccount(incoming()) &&
+                      incoming().groupId == existing().groupId;
+        allow delete: if isSignedIn() && isValidId(accountId) && isGroupMember(groupId);
+      }
+
+      // Udhaar Transactions subcollection
+      function isValidUdhaarTransaction(data) {
+        return data.id is string && data.id.size() <= 128 &&
+               data.groupId is string && data.groupId == groupId &&
+               data.accountId is string && data.accountId.size() <= 128 &&
+               data.transactionType in ['gave', 'got'] &&
+               data.amountPaise is number && data.amountPaise >= 0 &&
+               data.transactionDate is string && data.transactionDate.size() <= 20 &&
+               data.createdBy is string && data.createdBy.size() <= 128;
+      }
+
+      match /udhaarTransactions/{transactionId} {
+        allow read: if isSignedIn() && isValidId(transactionId) && isGroupMember(groupId);
+        allow create: if isSignedIn() && isValidId(transactionId) && isGroupMember(groupId) && isValidUdhaarTransaction(incoming());
+        allow update: if isSignedIn() && isValidId(transactionId) && isGroupMember(groupId) && isValidUdhaarTransaction(incoming()) &&
+                      incoming().groupId == existing().groupId;
+        allow delete: if isSignedIn() && isValidId(transactionId) && isGroupMember(groupId);
+      }
+
+      // Settlements subcollection
+      function isValidSettlement(data) {
+        return data.id is string && data.id.size() <= 128 &&
+               data.groupId is string && data.groupId == groupId &&
+               data.payerMemberId is string && data.payerMemberId.size() <= 128 &&
+               data.recipientMemberId is string && data.recipientMemberId.size() <= 128 &&
+               data.amountPaise is number && data.amountPaise >= 0 &&
+               data.status in ['pending', 'confirmed', 'rejected'];
+      }
+
+      match /settlements/{settlementId} {
+        allow read: if isSignedIn() && isValidId(settlementId) && isGroupMember(groupId);
+        allow create: if isSignedIn() && isValidId(settlementId) && isGroupMember(groupId) && isValidSettlement(incoming());
+        allow update: if isSignedIn() && isValidId(settlementId) && isGroupMember(groupId) && isValidSettlement(incoming()) &&
+                      incoming().groupId == existing().groupId;
+        allow delete: if isSignedIn() && isValidId(settlementId) && isGroupMember(groupId);
+      }
+    }
+  }
+}

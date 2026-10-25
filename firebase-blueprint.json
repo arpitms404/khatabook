@@ -1,0 +1,153 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile with display name, email, phone, and metadata",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "fullName": { "type": "string", "maxLength": 100 },
+        "email": { "type": "string", "maxLength": 120 },
+        "phone": { "type": "string", "maxLength": 20 },
+        "avatarUrl": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "fullName", "email"]
+    },
+    "FamilyGroup": {
+      "title": "FamilyGroup",
+      "description": "Shared family group container with 10-member limit",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string", "maxLength": 100 },
+        "monthlyBudgetPaise": { "type": "number" },
+        "currency": { "type": "string", "maxLength": 10 },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "name", "createdBy"]
+    },
+    "GroupMember": {
+      "title": "GroupMember",
+      "description": "Member association to a family group (max 10)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "groupId": { "type": "string" },
+        "userId": { "type": "string" },
+        "fullName": { "type": "string", "maxLength": 100 },
+        "relation": { "type": "string", "maxLength": 50 },
+        "role": { "type": "string", "enum": ["admin", "member"] },
+        "status": { "type": "string", "enum": ["active", "inactive"] },
+        "joinedAt": { "type": "string" }
+      },
+      "required": ["id", "groupId", "userId", "role"]
+    },
+    "Expense": {
+      "title": "Expense",
+      "description": "Shared household bill or personal expense with integer paise amount",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "groupId": { "type": "string" },
+        "title": { "type": "string", "maxLength": 150 },
+        "amountPaise": { "type": "number" },
+        "expenseType": { "type": "string", "enum": ["personal", "shared"] },
+        "category": { "type": "string", "maxLength": 50 },
+        "paidBy": { "type": "string" },
+        "expenseDate": { "type": "string", "maxLength": 20 },
+        "splitMethod": { "type": "string", "enum": ["equal", "custom"] },
+        "receiptUrl": { "type": "string", "maxLength": 500 },
+        "notes": { "type": "string", "maxLength": 500 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "groupId", "title", "amountPaise", "expenseType", "paidBy", "expenseDate"]
+    },
+    "UdhaarAccount": {
+      "title": "UdhaarAccount",
+      "description": "Digital Khata account for external parties, helpers, relatives",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "groupId": { "type": "string" },
+        "name": { "type": "string", "maxLength": 100 },
+        "phone": { "type": "string", "maxLength": 20 },
+        "relation": { "type": "string", "maxLength": 50 },
+        "accountType": { "type": "string", "enum": ["family", "shopkeeper", "daily_help", "friend", "other"] },
+        "openingBalancePaise": { "type": "number" },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "groupId", "name", "accountType", "createdBy"]
+    },
+    "UdhaarTransaction": {
+      "title": "UdhaarTransaction",
+      "description": "Diya (Gave) or Liya (Got) Khata ledger entry",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "groupId": { "type": "string" },
+        "accountId": { "type": "string" },
+        "transactionType": { "type": "string", "enum": ["gave", "got"] },
+        "amountPaise": { "type": "number" },
+        "transactionDate": { "type": "string", "maxLength": 20 },
+        "dueDate": { "type": "string", "maxLength": 20 },
+        "paymentMode": { "type": "string", "enum": ["cash", "upi", "bank_transfer", "other"] },
+        "description": { "type": "string", "maxLength": 200 },
+        "createdBy": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "groupId", "accountId", "transactionType", "amountPaise", "transactionDate", "createdBy"]
+    },
+    "Settlement": {
+      "title": "Settlement",
+      "description": "Bilateral debt settlement between family members",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "groupId": { "type": "string" },
+        "payerMemberId": { "type": "string" },
+        "recipientMemberId": { "type": "string" },
+        "amountPaise": { "type": "number" },
+        "settlementDate": { "type": "string", "maxLength": 20 },
+        "status": { "type": "string", "enum": ["pending", "confirmed", "rejected"] },
+        "notes": { "type": "string", "maxLength": 200 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "groupId", "payerMemberId", "recipientMemberId", "amountPaise", "status"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile document"
+    },
+    "/groups/{groupId}": {
+      "schema": "FamilyGroup",
+      "description": "Family group collection"
+    },
+    "/groups/{groupId}/members/{memberId}": {
+      "schema": "GroupMember",
+      "description": "Active family members for the group"
+    },
+    "/groups/{groupId}/expenses/{expenseId}": {
+      "schema": "Expense",
+      "description": "Shared and personal expense transactions"
+    },
+    "/groups/{groupId}/udhaarAccounts/{accountId}": {
+      "schema": "UdhaarAccount",
+      "description": "Digital Khata accounts"
+    },
+    "/groups/{groupId}/udhaarTransactions/{transactionId}": {
+      "schema": "UdhaarTransaction",
+      "description": "Khata Gave and Got ledger entries"
+    },
+    "/groups/{groupId}/settlements/{settlementId}": {
+      "schema": "Settlement",
+      "description": "Family debt repayments and settlements"
+    }
+  }
+}

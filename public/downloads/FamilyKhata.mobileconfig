@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>PayloadContent</key>
+    <array>
+        <dict>
+            <key>FullScreen</key>
+            <true/>
+            <key>IsRemovable</key>
+            <true/>
+            <key>Label</key>
+            <string>FamilyKhata</string>
+            <key>PayloadDescription</key>
+            <string>Installs FamilyKhata on your iOS Home Screen with offline access and full screen view.</string>
+            <key>PayloadDisplayName</key>
+            <string>FamilyKhata</string>
+            <key>PayloadIdentifier</key>
+            <string>com.familykhata.webclip</string>
+            <key>PayloadType</key>
+            <string>com.apple.webClip.managed</string>
+            <key>PayloadUUID</key>
+            <string>9284e8c4-f364-4733-81e6-45044c86ead2</string>
+            <key>PayloadVersion</key>
+            <integer>1</integer>
+            <key>Precomposed</key>
+            <true/>
+            <key>URL</key>
+            <string>https://ais-pre-crij36pj5llwmrl4masxle-108066905661.asia-southeast1.run.app</string>
+        </dict>
+    </array>
+    <key>PayloadDescription</key>
+    <string>Direct installation profile for FamilyKhata iOS App.</string>
+    <key>PayloadDisplayName</key>
+    <string>FamilyKhata App (iOS)</string>
+    <key>PayloadIdentifier</key>
+    <string>com.familykhata.profile</string>
+    <key>PayloadOrganization</key>
+    <string>FamilyKhata</string>
+    <key>PayloadRemovalDisallowed</key>
+    <false/>
+    <key>PayloadType</key>
+    <string>Configuration</string>
+    <key>PayloadUUID</key>
+    <string>9c2a5ad0-2264-4733-81e6-45044c86ead2</string>
+    <key>PayloadVersion</key>
+    <integer>1</integer>
+</dict>
+</plist>

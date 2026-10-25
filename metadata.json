@@ -1,0 +1,6 @@
+{
+  "name": "FamilyKhata",
+  "description": "Production-ready family expense tracker, shared bill splitting, budget management, and settlements with real-time sync.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
